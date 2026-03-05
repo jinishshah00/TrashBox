@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrashBox Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0f1a; --surface: #111827; --card: #151d2e; --card-hover: #1a2436;
+  --border: rgba(56,97,251,.15); --border-light: rgba(56,97,251,.25);
+  --text: #e8ecf4; --text-secondary: #94a3b8; --text-muted: #64748b;
+  --accent: #3b82f6; --accent-light: #60a5fa; --accent-soft: rgba(59,130,246,.1);
+  --green: #22c55e; --green-soft: rgba(34,197,94,.12);
+  --amber: #f59e0b; --amber-soft: rgba(245,158,11,.12);
+  --red: #ef4444; --red-soft: rgba(239,68,68,.12);
+  --radius: 16px; --radius-sm: 10px; --radius-xs: 6px;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; line-height: 1.5;
+  position: relative; overflow-x: hidden;
+}
+
+/* ── subtle bg glow ── */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 10%, rgba(59,130,246,.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 45% at 85% 20%, rgba(99,102,241,.06) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 50% 95%, rgba(59,130,246,.05) 0%, transparent 50%);
+}
+
+/* ── dot grid ── */
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(circle, rgba(148,163,184,.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ── layout ── */
+.shell { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; position: relative; z-index: 1; }
+header { text-align: center; margin-bottom: 2.5rem; }
+header h1 {
+  font-size: 2.2rem; font-weight: 800; letter-spacing: -.02em;
+  background: linear-gradient(135deg, #e8ecf4, #93c5fd);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+header p { color: var(--text-muted); font-size: .9rem; margin-top: .35rem; }
+
+/* ── two-column grid ── */
+.grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+
+.panel {
+  background: rgba(17,24,39,.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(59,130,246,.04), 0 4px 24px rgba(0,0,0,.3);
+}
+.panel-header {
+  padding: .75rem 1.25rem; border-bottom: 1px solid var(--border);
+  font-size: .75rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-muted);
+  display: flex; align-items: center; gap: .45rem;
+}
+.panel-body { padding: 1.25rem; }
+
+/* ── upload panel (left) ── */
+.drop-zone {
+  border: 2px dashed rgba(59,130,246,.2); border-radius: var(--radius-sm);
+  padding: 2.5rem 1rem; text-align: center; cursor: pointer;
+  transition: all .2s ease; background: rgba(21,29,46,.6);
+}
+.drop-zone:hover, .drop-zone.over {
+  border-color: var(--accent); background: var(--accent-soft);
+  box-shadow: 0 0 20px rgba(59,130,246,.1);
+}
+.drop-zone svg { width: 44px; height: 44px; stroke: var(--text-muted); margin-bottom: .6rem; }
+.drop-zone .hint { color: var(--text-muted); font-size: .85rem; }
+.drop-zone .hint span { color: var(--accent-light); text-decoration: underline; cursor: pointer; }
+
+.actions { display: flex; gap: .5rem; margin-top: 1rem; }
+.btn {
+  flex: 1; padding: .6rem 0; border: none; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: .85rem; font-weight: 600;
+  cursor: pointer; transition: all .15s ease; display: flex;
+  align-items: center; justify-content: center; gap: .4rem;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-light); }
+.btn-ghost {
+  background: transparent; color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent-light); }
+
+.img-preview {
+  display: none; margin-top: 1rem; border-radius: var(--radius-sm);
+  overflow: hidden; border: 1px solid var(--border); position: relative;
+  background: #000;
+}
+.img-preview img {
+  width: 100%; display: block; object-fit: contain; max-height: 380px;
+}
+.img-preview .re-upload {
+  position: absolute; top: .5rem; right: .5rem;
+  background: rgba(0,0,0,.65); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius-xs);
+  color: #fff; font-size: .72rem; font-weight: 500; padding: .3rem .6rem;
+  cursor: pointer; transition: .15s;
+}
+.img-preview .re-upload:hover { background: var(--accent); border-color: var(--accent); }
+
+/* ── result panel (right) ── */
+.result-panel { display: none; }
+.result-panel.visible { display: block; }
+
+.loading-state { display: none; padding: 3rem 1rem; text-align: center; }
+.loading-state.active { display: block; }
+.ring {
+  width: 40px; height: 40px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin .7s linear infinite; margin: 0 auto .75rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-state p { color: var(--text-muted); font-size: .85rem; }
+
+.empty-state {
+  padding: 3.5rem 1.5rem; text-align: center; color: var(--text-muted);
+  font-size: .9rem;
+}
+.empty-state svg { width: 48px; height: 48px; stroke: var(--border-light); margin-bottom: .75rem; }
+
+.result-body { display: none; }
+.result-body.active { display: block; }
+
+/* classification card */
+.classification {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 1rem 1.15rem;
+}
+.class-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.class-label { font-size: 1.2rem; font-weight: 700; }
+.class-sub {
+  font-size: .82rem; color: var(--text-secondary); margin-top: .15rem;
+}
+.class-sub .arrow { color: var(--text-muted); margin: 0 .3rem; }
+.badge {
+  padding: .2rem .65rem; border-radius: 20px; font-size: .78rem; font-weight: 600;
+  white-space: nowrap;
+}
+.badge.high { background: var(--green-soft); color: var(--green); }
+.badge.mid  { background: var(--amber-soft); color: var(--amber); }
+.badge.low  { background: var(--red-soft); color: var(--red); }
+
+.conf-bar {
+  height: 4px; background: var(--border); border-radius: 2px;
+  margin-top: .75rem; overflow: hidden;
+}
+.conf-bar-fill { height: 100%; border-radius: 2px; transition: width .6s ease; }
+.conf-bar-fill.high { background: var(--green); }
+.conf-bar-fill.mid  { background: var(--amber); }
+.conf-bar-fill.low  { background: var(--red); }
+
+/* disposal action box */
+.action-box {
+  margin-top: 1rem; border-radius: var(--radius-sm); padding: 1rem 1.15rem;
+  background: rgba(59,130,246,.04);
+  border: 1px solid var(--border);
+}
+.action-box-header {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .72rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--accent-light); margin-bottom: .5rem;
+}
+.action-box-header svg { width: 14px; height: 14px; stroke: var(--accent-light); }
+.action-text {
+  font-size: .88rem; color: var(--text-secondary); line-height: 1.6;
+}
+
+/* expandable score lists */
+.scores-section { margin-top: 1rem; }
+
+/* ── secondary detections ── */
+.also-detected {
+  margin-top: 1.25rem; padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.also-header {
+  font-size: .72rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--amber); margin-bottom: .6rem;
+  display: flex; align-items: center; gap: .4rem;
+}
+.also-header svg { width: 14px; height: 14px; stroke: var(--amber); }
+.also-card {
+  background: rgba(21,29,46,.6); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: .85rem 1rem;
+  margin-bottom: .5rem;
+}
+.also-card-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.also-card-label { font-size: .95rem; font-weight: 600; }
+.also-card-sub { font-size: .78rem; color: var(--text-muted); margin-top: .1rem; }
+.also-card-sub .arrow { margin: 0 .25rem; }
+.also-card-tip {
+  margin-top: .5rem; font-size: .82rem; color: var(--text-secondary);
+  line-height: 1.5; padding: .5rem .65rem;
+  background: rgba(59,130,246,.04); border-radius: var(--radius-xs);
+  border-left: 2px solid var(--accent);
+}
+.scores-toggle {
+  font-size: .78rem; color: var(--accent); cursor: pointer;
+  display: inline-flex; align-items: center; gap: .3rem;
+  user-select: none;
+}
+.scores-toggle:hover { color: var(--accent-light); }
+.scores-list { display: none; margin-top: .5rem; }
+.scores-list.open { display: block; }
+.score-row {
+  display: flex; align-items: center; gap: .5rem;
+  font-size: .76rem; margin-bottom: .3rem;
+}
+.score-name {
+  width: 130px; text-align: right; color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.score-bar-bg {
+  flex: 1; height: 3px; background: var(--border); border-radius: 2px;
+}
+.score-bar {
+  height: 100%; border-radius: 2px; background: var(--accent);
+  min-width: 1px; transition: width .4s;
+}
+.score-val { width: 44px; text-align: right; color: var(--text-muted); }
+
+/* camera modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.8); backdrop-filter: blur(4px);
+  z-index: 200; justify-content: center; align-items: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem; max-width: 440px; width: 92%;
+}
+.modal-card video { width: 100%; border-radius: var(--radius-sm); }
+.modal-card .actions { margin-top: .75rem; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <h1>TrashBox Classifier</h1>
+    <p>Upload or capture an image to identify and sort your waste</p>
+  </header>
+
+  <div class="grid">
+    <!-- ─── LEFT: Upload ─── -->
+    <div class="panel">
+      <div class="panel-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        Upload Image
+      </div>
+      <div class="panel-body">
+        <div class="drop-zone" id="drop">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <p class="hint">Drag &amp; drop an image or <span onclick="document.getElementById('fileIn').click()">browse</span></p>
+        </div>
+        <div class="actions">
+          <input type="file" id="fileIn" accept="image/*" hidden>
+          <button class="btn btn-primary" onclick="document.getElementById('fileIn').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+            Choose File
+          </button>
+          <button class="btn btn-ghost" onclick="openCam()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Camera
+          </button>
+        </div>
+        <div class="img-preview" id="preview">
+          <img id="prevImg">
+          <button class="re-upload" onclick="document.getElementById('fileIn').click()">Change</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RIGHT: Results ─── -->
+    <div class="panel result-panel" id="resultPanel">
+      <div class="panel-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="14" height="14"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        Classification Result
+      </div>
+
+      <div class="panel-body loading-state" id="loader">
+        <div class="ring"></div>
+        <p>Analysing image…</p>
+      </div>
+
+      <div class="panel-body result-body" id="resultBody">
+        <div class="classification">
+          <div class="class-row">
+            <div>
+              <div class="class-label" id="mainLabel"></div>
+              <div class="class-sub" id="subLine"></div>
+            </div>
+            <span class="badge" id="confBadge"></span>
+          </div>
+          <div class="conf-bar"><div class="conf-bar-fill" id="confFill"></div></div>
+        </div>
+
+        <div class="action-box">
+          <div class="action-box-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+            What To Do
+          </div>
+          <div class="action-text" id="actionText"></div>
+        </div>
+
+        <div class="scores-section">
+          <span class="scores-toggle" onclick="toggleScores('catScores',this)">&#x25b8; All category scores</span>
+          <div class="scores-list" id="catScores"></div>
+        </div>
+        <div class="scores-section" id="subScoresWrap" style="display:none">
+          <span class="scores-toggle" onclick="toggleScores('subScores',this)">&#x25b8; All subcategory scores</span>
+          <div class="scores-list" id="subScores"></div>
+        </div>
+
+        <!-- secondary detections -->
+        <div class="also-detected" id="alsoDetected" style="display:none">
+          <div class="also-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 9v2m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+            Also Detected In Image
+          </div>
+          <div id="alsoCards"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RIGHT: Empty state (shown before first upload) ─── -->
+    <div class="panel" id="emptyPanel">
+      <div class="panel-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" width="14" height="14"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Classification Result
+      </div>
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <p>Upload an image to see results here</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- camera modal -->
+<div class="modal-overlay" id="camModal">
+  <div class="modal-card">
+    <video id="camVid" autoplay playsinline></video>
+    <canvas id="camCnv" hidden></canvas>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="snap()">Capture</button>
+      <button class="btn btn-ghost" onclick="closeCam()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function confLvl(v) { return v >= .7 ? 'high' : v >= .4 ? 'mid' : 'low'; }
+function pct(v) { return (v * 100).toFixed(1) + '%'; }
+
+function toggleScores(id, el) {
+  const list = $(id);
+  list.classList.toggle('open');
+  el.innerHTML = list.classList.contains('open') ? '&#x25be; Hide' : '&#x25b8; Show all';
+}
+
+function renderBars(containerId, scores) {
+  const el = $(containerId);
+  el.innerHTML = '';
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  for (const [name, val] of sorted) {
+    const display = name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    el.innerHTML += `
+      <div class="score-row">
+        <span class="score-name">${display}</span>
+        <div class="score-bar-bg"><div class="score-bar" style="width:${val * 100}%"></div></div>
+        <span class="score-val">${pct(val)}</span>
+      </div>`;
+  }
+}
+
+function showResult(d) {
+  $('loader').classList.remove('active');
+  $('resultBody').classList.add('active');
+
+  // Main label: show subcategory as primary if it exists, parent as breadcrumb
+  const label = $('mainLabel');
+  const sub = $('subLine');
+
+  if (d.has_subcategories && d.subcategory) {
+    label.textContent = d.subcategory_display;
+    sub.innerHTML = d.parent_display + ' <span class="arrow">\u2192</span> ' + d.subcategory_display;
+    sub.style.display = '';
+  } else {
+    label.textContent = d.parent_display;
+    sub.style.display = 'none';
+  }
+
+  // Confidence badge — use subcategory confidence when available
+  const conf = d.has_subcategories && d.subcategory_confidence != null
+    ? Math.min(d.parent_confidence, d.subcategory_confidence)
+    : d.parent_confidence;
+  const lvl = confLvl(conf);
+  $('confBadge').textContent = pct(conf);
+  $('confBadge').className = 'badge ' + lvl;
+  $('confFill').style.width = pct(conf);
+  $('confFill').className = 'conf-bar-fill ' + lvl;
+
+  // Unified "What To Do" — prefer subcategory tip if present, else parent tip
+  $('actionText').textContent = (d.has_subcategories && d.subcategory_tip)
+    ? d.subcategory_tip
+    : (d.disposal_tip || 'Check local waste guidelines.');
+
+  // Score lists
+  renderBars('catScores', d.all_parent_scores);
+  if (d.has_subcategories && d.all_subcategory_scores) {
+    $('subScoresWrap').style.display = '';
+    renderBars('subScores', d.all_subcategory_scores);
+  } else {
+    $('subScoresWrap').style.display = 'none';
+  }
+
+  // Secondary detections
+  const also = $('alsoDetected');
+  const cards = $('alsoCards');
+  cards.innerHTML = '';
+  if (d.secondary_detections && d.secondary_detections.length > 0) {
+    also.style.display = '';
+    for (const s of d.secondary_detections) {
+      const lbl = s.subcategory_display || s.parent_display;
+      const breadcrumb = s.subcategory
+        ? `<div class="also-card-sub">${s.parent_display} <span class="arrow">\u2192</span> ${s.subcategory_display}</div>`
+        : '';
+      const tip = (s.subcategory_tip || s.disposal_tip || 'Check local guidelines.');
+      const sConf = s.parent_confidence;
+      const sLvl = confLvl(sConf);
+      cards.innerHTML += `
+        <div class="also-card">
+          <div class="also-card-row">
+            <div>
+              <div class="also-card-label">${lbl}</div>
+              ${breadcrumb}
+            </div>
+            <span class="badge ${sLvl}">${pct(sConf)}</span>
+          </div>
+          <div class="also-card-tip">${tip}</div>
+        </div>`;
+    }
+  } else {
+    also.style.display = 'none';
+  }
+}
+
+function beginUpload() {
+  $('emptyPanel').style.display = 'none';
+  const rp = $('resultPanel');
+  rp.classList.add('visible');
+  $('resultBody').classList.remove('active');
+  $('loader').classList.add('active');
+}
+
+async function sendFile(file) {
+  $('preview').style.display = 'block';
+  $('prevImg').src = URL.createObjectURL(file);
+  beginUpload();
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await fetch('/predict', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error(await r.text());
+    showResult(await r.json());
+  } catch (e) {
+    $('loader').classList.remove('active');
+    alert('Error: ' + e.message);
+  }
+}
+
+async function sendB64(dataUrl) {
+  $('preview').style.display = 'block';
+  $('prevImg').src = dataUrl;
+  beginUpload();
+  try {
+    const r = await fetch('/predict/base64', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: dataUrl }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    showResult(await r.json());
+  } catch (e) {
+    $('loader').classList.remove('active');
+    alert('Error: ' + e.message);
+  }
+}
+
+$('fileIn').addEventListener('change', () => {
+  if ($('fileIn').files[0]) sendFile($('fileIn').files[0]);
+});
+
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files[0]) sendFile(e.dataTransfer.files[0]);
+});
+drop.addEventListener('click', () => $('fileIn').click());
+
+let camStream = null;
+function openCam() {
+  $('camModal').classList.add('show');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(s => { camStream = s; $('camVid').srcObject = s; })
+    .catch(() => { alert('Camera not available'); closeCam(); });
+}
+function closeCam() {
+  $('camModal').classList.remove('show');
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+}
+function snap() {
+  const v = $('camVid'), c = $('camCnv');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v, 0, 0);
+  closeCam();
+  sendB64(c.toDataURL('image/jpeg', 0.9));
+}
+</script>
+</body>
+</html>

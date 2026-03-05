@@ -1,0 +1,88 @@
+════════════════════════════════════════════════════════
+   TRASH CLASSIFIER — FULL TRAINING
+════════════════════════════════════════════════════════
+Device : cpu
+Epochs : 15   Batch : 32   Max/class(V1) : 3000
+
+▸ Scanning & splitting data …
+  ↳ auto‑split hazardous/batteries: 880t/110te/110v
+  ↳ auto‑split hazardous/light_bulbs: 872t/108te/108v
+  ↳ auto‑split hazardous/paints: 123t/15te/15v
+  ↳ auto‑split hazardous/pesticides: 113t/13te/13v
+  ↳ auto‑split non_recyclable/ceramic_product: 113t/13te/13v
+  ↳ auto‑split non_recyclable/diapers: 117t/14te/14v
+  ↳ auto‑split non_recyclable/multi_layered_wrappers: 109t/13te/13v
+  ↳ auto‑split non_recyclable/sanitary_napkin: 88t/11te/11v
+  ↳ auto‑split non_recyclable/stroform_product: 96t/11te/11v
+  ↳ auto‑split V1 clothes: 4261t/532te/532v
+  ↳ auto‑split V1 val food_organic: 1256 from train
+  ↳ auto‑split V1 shoes: 1583t/197te/197v
+
+  V1 — 12 parent classes:
+    cardboard            (flat)
+    clothes              (flat)
+    e_waste              → electrical_cables, electronic_chips, laptops, small_appliances, smartphones
+    food_organic         (flat)
+    glass                (flat)
+    hazardous            → batteries, light_bulbs, paints, pesticides
+    medical              → gloves, masks, medicines, syringe
+    metal                → beverage_cans, construction_scrap, metal_containers, other_metal_objects, spray_cans
+    non_recyclable       → ceramic_product, diapers, multi_layered_wrappers, sanitary_napkin, stroform_product
+    paper                → news_paper, paper, paper_cups, tetra_pak
+    plastic              → cigarette_butt, plastic_bags, plastic_bottles, plastic_containers, plastic_cups
+    shoes                (flat)
+
+  V2 — 32 subcategory classes
+    V1 train: 24,376    V2 train: 12,837
+    V1 test :  4,231    V2 test :  1,615
+    V1 val  :  4,074    V2 val  :  1,591
+
+▸ Phase 1 — Training V1 (parent classifier, 12 classes) …
+
+/Users/jinishshah/Downloads/Projects/trash-classifier/venv/lib/python3.12/site-packages/PIL/Image.py:1034: UserWarning: Palette images with Transparency expressed in bytes should be converted to RGBA images
+  warnings.warn(
+/Users/jinishshah/Downloads/Projects/trash-classifier/venv/lib/python3.12/site-packages/PIL/TiffImagePlugin.py:949: UserWarning: Truncated File Read
+  warnings.warn(str(msg))
+  [V1] Ep  1/15 │  1477s │ loss 1.0238  train 0.6749  val 0.8375 ★
+  [V1] Ep  2/15 │  1468s │ loss 0.7918  train 0.7441  val 0.8444 ★
+  [V1] Ep  3/15 │  1486s │ loss 0.7250  train 0.7663  val 0.8574 ★
+  [V1] Ep  4/15 │  1496s │ loss 0.6743  train 0.7867  val 0.8598 ★
+  [V1] Ep  5/15 │  1486s │ loss 0.6430  train 0.7926  val 0.8483
+  ── unfreezing backbone at epoch 6 ──
+  [V1] Ep  6/15 │  3504s │ loss 0.4400  train 0.8588  val 0.9107 ★
+  [V1] Ep  7/15 │  3450s │ loss 0.3057  train 0.9029  val 0.9207 ★
+  [V1] Ep  8/15 │  3458s │ loss 0.2376  train 0.9249  val 0.9251 ★
+  [V1] Ep  9/15 │  3446s │ loss 0.1883  train 0.9400  val 0.9318 ★
+  [V1] Ep 10/15 │  3449s │ loss 0.1658  train 0.9462  val 0.9296
+  [V1] Ep 11/15 │  3589s │ loss 0.1377  train 0.9559  val 0.9362 ★
+  [V1] Ep 12/15 │  3509s │ loss 0.1200  train 0.9600  val 0.9377 ★
+  [V1] Ep 13/15 │  3600s │ loss 0.1004  train 0.9682  val 0.9396 ★
+  [V1] Ep 14/15 │  3583s │ loss 0.0967  train 0.9691  val 0.9369
+  [V1] Ep 15/15 │  3568s │ loss 0.0878  train 0.9713  val 0.9340
+
+  [V1] Test accuracy: 0.9478  (4010/4231)
+
+▸ Phase 2 — Training V2 (subcategory classifier, 32 classes) …
+
+  [V2] Ep  1/15 │   778s │ loss 1.6673  train 0.5529  val 0.7568 ★
+  [V2] Ep  2/15 │   784s │ loss 1.1405  train 0.6735  val 0.7718 ★
+  [V2] Ep  3/15 │   800s │ loss 0.9815  train 0.7076  val 0.7888 ★
+  [V2] Ep  4/15 │   812s │ loss 0.8988  train 0.7361  val 0.8026 ★
+  [V2] Ep  5/15 │   811s │ loss 0.8329  train 0.7509  val 0.7957
+  ── unfreezing backbone at epoch 6 ──
+  [V2] Ep  6/15 │  1926s │ loss 0.5968  train 0.8188  val 0.8479 ★
+  [V2] Ep  7/15 │  1932s │ loss 0.3823  train 0.8860  val 0.8642 ★
+  [V2] Ep  8/15 │  1955s │ loss 0.3108  train 0.9063  val 0.8680 ★
+  [V2] Ep  9/15 │  1955s │ loss 0.2476  train 0.9243  val 0.8737 ★
+  [V2] Ep 10/15 │  1969s │ loss 0.2019  train 0.9375  val 0.8768 ★
+  [V2] Ep 11/15 │  2028s │ loss 0.1706  train 0.9452  val 0.8743
+  [V2] Ep 12/15 │  1998s │ loss 0.1417  train 0.9556  val 0.8831 ★
+  [V2] Ep 13/15 │  2029s │ loss 0.1261  train 0.9600  val 0.8831
+  [V2] Ep 14/15 │  1916s │ loss 0.1202  train 0.9632  val 0.8843 ★
+  [V2] Ep 15/15 │  1866s │ loss 0.1076  train 0.9674  val 0.8843
+
+  [V2] Test accuracy: 0.8805  (1422/1615)
+
+════════════════════════════════════════════════════════
+   TRAINING COMPLETE
+════════════════════════════════════════════════════════
