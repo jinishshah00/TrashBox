@@ -275,4 +275,6 @@ trash-classifier/
 
 ## License
 
-This project uses the [TrashBox dataset](https://github.com/nikhilvenkatkumsetty/TrashBox) — see their repository for dataset licensing terms.
+This project is licensed under the [MIT License](LICENSE).
+
+Dataset: This project uses the [TrashBox dataset](https://github.com/nikhilvenkatkumsetty/TrashBox) — see their repository for dataset licensing terms.
